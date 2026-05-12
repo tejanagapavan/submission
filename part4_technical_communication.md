@@ -1,0 +1,17 @@
+# Task 4.1: Scenario Response
+
+I selected PR #3478 (Fetchart Concurrency & Atomic Move) because it focuses on a clearly defined systems-level problem with a relatively contained scope. Compared to PR #3145, which affects the autotagger logic, importer workflow, configuration handling, and user interaction, PR #3478 is more centered around filesystem safety and concurrency management. This makes the requirements easier to validate through testing and reduces ambiguity during implementation.
+
+Another reason for selecting this PR is that the problem is technically practical and directly related to reliability. The issue mainly involves temporary file handling, atomic file operations, and cross-platform locking behavior. Since these are isolated infrastructure concerns, the impact of changes can be measured more objectively through automated tests and concurrency simulations.
+
+From a technical perspective, this PR also aligns well with my background in Python development and filesystem handling. I have previously worked with concurrency-related issues involving temporary files, process synchronization, and safe file operations. Because of this experience, I am familiar with many of the failure scenarios associated with file locking, especially differences between POSIX systems and Windows environments.
+
+One of the biggest challenges I expect during implementation is handling platform-specific locking behavior. POSIX systems use `fcntl` for advisory locks, while Windows relies on different mechanisms such as `msvcrt` locking. Since their behavior is not identical, ensuring consistent functionality across operating systems can be difficult. Testing these differences in CI environments may also be unreliable because race conditions are often non-deterministic and may not appear consistently during automated test runs.
+
+To manage this issue, I would abstract the locking functionality into a dedicated context manager so platform-specific behavior remains isolated from the rest of the codebase. I would also rely heavily on `unittest.mock` to simulate lock failures and filesystem errors during testing. In addition, I would manually verify the implementation using a Windows virtual machine to ensure the locking logic behaves correctly outside Linux-based CI runners.
+
+Another possible challenge is maintaining backward compatibility after replacing the old hash-based temporary filename system. Some external scripts or unofficial plugins may have depended on the older temporary path structure for cleanup or debugging purposes. To reduce the risk of breaking existing workflows, I would perform a repository-wide search for assumptions related to temporary filenames and clearly document the change in release notes and plugin documentation.
+
+A final concern involves synchronization between filesystem operations and the SQLite database. If beets crashes after moving artwork files but before committing metadata changes to the database, inconsistencies may occur where the library references artwork that no longer exists. To minimize this risk, I would try to keep artwork installation within the same importer transaction flow whenever possible. Another option would be implementing a lightweight validation step that checks for missing artwork during library loading and attempts recovery if necessary.
+
+Overall, PR #3478 is a strong candidate because it solves a realistic concurrency problem, improves reliability for parallel imports, and requires careful consideration of filesystem behavior across multiple platforms.
